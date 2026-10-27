@@ -17,7 +17,8 @@ docker compose --profile outils pull caddy db k6
 for version in 1.0.0 1.1.0; do
     echo "Construction de l'image optilandes-app:${version}..."
     # Le code de chaque version est extrait de l'étiquette Git correspondante.
-    git archive "v${version}:app" | docker build --tag "optilandes-app:${version}" -
+    # --network host : la construction utilise le DNS du poste (indispensable sous WSL2).
+    git archive "v${version}:app" | docker build --network host --tag "optilandes-app:${version}" -
 done
 
 echo
