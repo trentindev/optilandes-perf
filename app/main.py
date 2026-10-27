@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field
 
 from tournee import calculer_tournee
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 NB_CRENEAUX = 8
 
 
@@ -192,24 +192,17 @@ def prendre_rendez_vous(demande: DemandeRendezVous):
 @app.get("/livraisons")
 def livraisons(zone: int = Query(ge=1), date_livraison: date = Query(alias="date")):
     with pool.connection() as conn:
-        rendez_vous = conn.execute(
-            "SELECT id, client_id, creneau FROM rendez_vous "
-            "WHERE zone_id = %s AND date_livraison = %s AND statut = 'confirme' "
-            "ORDER BY creneau, id",
+        lignes = conn.execute(
+            "SELECT r.id, r.creneau, c.nom, c.adresse, c.ville "
+            "FROM rendez_vous r JOIN clients c ON c.id = r.client_id "
+            "WHERE r.zone_id = %s AND r.date_livraison = %s AND r.statut = 'confirme' "
+            "ORDER BY r.creneau, r.id",
             (zone, date_livraison),
         ).fetchall()
-        resultat = []
-        for rdv in rendez_vous:
-            client = conn.execute(
-                "SELECT nom, adresse, ville FROM clients WHERE id = %s", (rdv["client_id"],)
-            ).fetchone()
-            resultat.append({
-                "id": rdv["id"],
-                "creneau": rdv["creneau"],
-                "client": client["nom"],
-                "adresse": client["adresse"],
-                "ville": client["ville"],
-            })
+    resultat = [
+        {"id": l["id"], "creneau": l["creneau"], "client": l["nom"], "adresse": l["adresse"], "ville": l["ville"]}
+        for l in lignes
+    ]
     return {"zone": zone, "date": date_livraison.isoformat(), "nombre": len(resultat), "livraisons": resultat}
 
 
@@ -230,9 +223,10 @@ def tournees(zone: int = Query(ge=1), date_livraison: date = Query(alias="date")
             "WHERE r.zone_id = %s AND r.date_livraison = %s AND r.statut = 'confirme' ORDER BY r.id",
             (zone, date_livraison),
         ).fetchall()
-        ordre, distance = calculer_tournee(
-            (depot["lat"], depot["lon"]), [(p["lat"], p["lon"], p["id"]) for p in points]
-        )
+    # La connexion est rendue au pool avant le calcul, qui ne touche plus la base.
+    ordre, distance = calculer_tournee(
+        (depot["lat"], depot["lon"]), [(p["lat"], p["lon"], p["id"]) for p in points]
+    )
     resultat = {
         "zone": zone,
         "date": date_livraison.isoformat(),
