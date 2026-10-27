@@ -125,7 +125,8 @@ class DemandeRendezVous(BaseModel):
 
 
 @app.get("/health")
-def sante():
+async def sante():
+    # Fonction asynchrone : le contrôle de santé ne fait pas la queue derrière les autres requêtes.
     return {"statut": "ok", "version": VERSION, "instance": INSTANCE}
 
 
