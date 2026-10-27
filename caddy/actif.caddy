@@ -1,0 +1,21 @@
+# Environnement actif : bleu
+# Ce fichier est réécrit par scripts/basculer.sh.
+reverse_proxy optilandes-app-bleu-1:8000 optilandes-app-bleu-2:8000 optilandes-app-bleu-3:8000 {
+	# Les trois noms correspondent aux instances 1, 2 et 3 du service app-bleu.
+	# Une instance qui n'existe pas est simplement considérée comme hors service.
+	lb_policy round_robin
+
+	# Vérification active : Caddy interroge /health sur chaque instance toutes les secondes.
+	health_uri /health
+	health_interval 1s
+	health_timeout 2s
+
+	# Si une instance ne répond plus, Caddy essaie une autre instance pendant 5 s.
+	lb_try_duration 5s
+	# Une instance en échec est écartée pendant 10 s.
+	fail_duration 10s
+
+	# Le corps des requêtes est gardé en mémoire : une prise de rendez-vous (POST)
+	# peut ainsi être renvoyée vers une autre instance si la première est tombée.
+	request_buffers 64KiB
+}
