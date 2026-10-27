@@ -19,25 +19,47 @@ Sous WSL2, le dépôt doit être cloné dans le dossier personnel Linux (`~`), j
 
 ## Avant la séance (connexion Internet nécessaire)
 
+Chaque bloc de commandes se lance seul, après la fin du précédent.
+
+1. Cloner le dépôt :
+
 ```bash
 cd ~
 git clone <adresse-du-depot> optilandes-perf
 cd optilandes-perf
+```
+
+2. Télécharger les images et construire l'application en versions 1.0.0 et 1.1.0. L'opération dure plusieurs minutes :
+
+```bash
 ./scripts/preparer.sh
+```
+
+3. Une fois la préparation terminée, vérifier le poste. Le script doit se terminer sans erreur :
+
+```bash
 ./scripts/verifier-poste.sh
 ```
 
-Le script `preparer.sh` télécharge les images et construit l'application en versions 1.0.0 et 1.1.0. Le script `verifier-poste.sh` doit se terminer sans erreur.
-
 ## Démarrer l'application
+
+1. Démarrer les services :
 
 ```bash
 docker compose up -d
-docker compose ps
-curl http://localhost:8080/health
 ```
 
-Au premier démarrage, PostgreSQL charge 500 000 rendez-vous de démonstration : l'application devient disponible quand la base est déclarée `healthy`.
+2. Suivre leur état. Au premier démarrage, PostgreSQL charge 500 000 rendez-vous de démonstration : on relance cette commande jusqu'à ce que `db` puis `app-bleu` soient `healthy`.
+
+```bash
+docker compose ps
+```
+
+3. Vérifier que l'application répond :
+
+```bash
+curl http://localhost:8080/health
+```
 
 ## L'architecture
 
@@ -190,7 +212,7 @@ Ajouter des instances à l'environnement bleu, jusqu'à 3 :
 docker compose up -d --scale app-bleu=3
 ```
 
-Caddy répartit les requêtes entre les instances en bonne santé. Il vérifie chacune d'elles toutes les secondes sur `/health`.
+Caddy répartit les requêtes entre les instances en bonne santé. Il vérifie chacune d'elles toutes les secondes sur `/health`. Tant que les instances 2 et 3 n'existent pas, les journaux de Caddy le signalent chaque seconde par un message « HTTP request failed » : c'est normal.
 
 ### Changer de réglages ou de version : bascule bleu vers vert
 
@@ -199,16 +221,21 @@ Caddy répartit les requêtes entre les instances en bonne santé. Il vérifie c
 
 ```bash
 docker compose --profile vert up -d app-vert
+```
+
+3. Suivre son état, jusqu'à ce que l'instance verte soit `healthy` :
+
+```bash
 docker compose ps
 ```
 
-3. Attendre que l'instance verte soit `healthy`, puis basculer le trafic :
+4. Basculer le trafic :
 
 ```bash
 ./scripts/basculer.sh vert
 ```
 
-4. Laisser les requêtes en cours se terminer pendant 30 secondes au minimum, puis arrêter l'ancien environnement :
+5. Laisser les requêtes en cours se terminer pendant 30 secondes au minimum, puis arrêter l'ancien environnement :
 
 ```bash
 docker compose stop app-bleu
@@ -220,12 +247,17 @@ Un test de charge lancé pendant toute la bascule permet de vérifier qu'aucune 
 
 ## Repartir de zéro
 
+1. Arrêter tous les services et supprimer le volume de la base. Toutes les données, ainsi que les index ajoutés, seront rechargées depuis `db/init` :
+
 ```bash
 docker compose --profile vert --profile outils down -v
-docker compose up -d
 ```
 
-L'option `-v` supprime le volume de la base : toutes les données, ainsi que les index ajoutés, sont rechargées depuis `db/init`.
+2. Redémarrer, puis suivre l'état des services comme au premier démarrage :
+
+```bash
+docker compose up -d
+```
 
 ## Contenu du dépôt
 

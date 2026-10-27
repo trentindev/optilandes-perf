@@ -2,7 +2,6 @@
 # Caddy reçoit les requêtes sur le port 80 du conteneur
 # (publié sur le port PORT du poste, 8080 par défaut).
 # Le choix de l'environnement actif, bleu ou vert, se trouve dans actif.caddy.
-
 {
 	# Pas de HTTPS automatique : le TP se fait en HTTP sur le poste local.
 	auto_https off
